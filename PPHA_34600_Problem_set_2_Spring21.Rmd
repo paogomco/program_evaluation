@@ -1,0 +1,316 @@
+---
+title: "PPHA 34600 Problem Set 2"
+author: "Paola Gomez"
+date: "5/6/2021"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library("tidyverse")
+library("knitr")
+library("stargazer")
+
+```
+
+<!--
+
+Instructions:
+
+This problem set consists of two files: (1) this document with instructions and questions; and (2) a dataset which you will use to answer the questions below. 
+
+You can work in groups of up to three. Please identify your group members. Groups can share code, but each group member must turn in their own problem set, and must have separate written answers to the questions. You should submit both written answers and a file which contains your code and results for the data analysis. Your written answers must be parsimonious---wordiness will be penalized. You must use R. I recommend that you use RMarkdown or knitr, which will allow you to intersperse your code and written answers. If you are not using knitr, you must still include your complete code somewhere in the document. Note that you are primarily being graded on your written answers. Problem sets must be submitted in PDF format. Problem sets must be turned in via Canvas/Gradescope; no late submissions will be considered. 
+
+-->
+
+
+
+> A little-known department of the U.S. federal government, Congress's House Initiative for Creating Affordable Green pOwer (CHICAGO)'s is interested in setting up a new solar electricity program, the Clean and Ubiquitous Benchmark for Solar (CUBS).
+
+> They are working on putting together documents to justify funding this program. They ran a pilot scheme, Building Renewable energY And New Transmission 17 (BRYANT17), in 2017. BRYANT17 was a voluntary program where counties could get federal funding to build new utility-scale solar installations of up to 17 MW, as well as the transmission lines required to connect it to the grid. In order to support the CUBS, CHICAGO would like you to help them evaluate the effectiveness of BRYANT17 to decide whether this is a good idea for the whole country. 
+
+
+
+\newpage
+
+# Question 1
+
+> CHICAGO are interested in answering the following question: _What was the effect of BRYANT17 on total MWh of solar generation for the average county?_ To make sure everybody is on the same page, explain to them what the ideal experiment would be for answering this question. Describe the dataset that you'd like to have to carry out this ideal experiment, and use math, words, and the potential outcomes framework to explain what you would estimate and how you would do so. Make sure to be clear about the unit of analysis (i.e., what is $i$ here?). 
+
+It would be ideal to have data set with treatment and control variables that are similar (in characteristics), randomly assigned and there is perfect compliance. We need a dataset of treatment and control counties that were randomly assigned to any of the two states of the world. The units of analysis in this case are the counties. 
+The ideal experiment will be to calculate the average treatment effect (ATE) which observes the potential outcomes of an experiment. Which is the expectation across the population of is in terms of potential outcomes. 
+Di(0) =counties non  participants on BRYANT17
+Di(1) = counties participants on BRYANT17
+
+Yi(1) = solar generation of BRYANT17 
+Yi(0) solar generation of non BRYANT17 participants 
+
+We will estimate the difference in expected values for solar generation of counties randomly assigned to treatment(BRYANT17) minus effect of solar generation of counties that were randomly assigned to control 
+
+Tau^ATE=E[solar_generationi(1)]−E[solar_generationi(0)] where i is the county 
+
+\newpage
+
+# Question 2
+
+> CHICAGO like what you're suggesting, but think it's answering the wrong question. They aren't going to be able to get every county to participate (looking at you, WV). They'd instead like to know: _What was the effect of BRYANT17 on solar generation among counties who participated in the program?_ Describe in math and words, using the potential outcomes framework, what they'd like to estimate. Explain how this differs from what you described in (1), and describe what component of this estimand you will be fundamentally unable to observe.
+
+They will like to estimate the average treatment effect on the treated (ATT) instead of ATE that is the impact on counties, expectetion of the outcome (solar generation) conditional on being treated minus the expectation of being assigned to treatment but not taking it. 
+
+Tau^ATT = E[solar_generation(1)|Di =1]−E[solar_generation(0)|Di =1]
+Where: Di=1 -> assigned to BRYANT17
+      Di=0 -> not assigned to BRYANT17
+
+However because the fundamental problem of causal inference we cannot observe E [Countyi (0)|Di = 1], we are not able to observe both states of the world at the same time. We do not see untreated outcomes for treated units
+
+The difference from ATE iand ATT is the average treatment effect of the population and the aTT is a subset of the population (the units assigned to treatment)
+
+\newpage
+
+# Question 3
+
+> CHICAGO are on board with your explanation. Because BRYANT17 already happened, they can't run an RCT to study it. However, they do know that not all counties were actually offered funding for solar through BRYANT17. Non-BRYANT17 counties were not offered any funding for solar or transmission. Explain what you would recover if you simply compared BRYANT17 counties to non-BRYANT17 counties on average. Describe three concrete examples of why this might be problematic.
+
+Will be calculating the naive estimator which would be the average difference in outcomes of those who participate in BRYANT17 and those who did not.
+
+tau^naive = average[solar generation(1)]-average[solar generation(0)]
+
+However,  you are assuming that the non participants are a good counterfactual for the participants and ignoring that they could be selection bias as there might be different observable characteristics between counties selected and not selected i.e., economic situation, geography, political affiliation this could cause under or over estimation of the treatment effect. 
+
+
+
+\newpage
+
+# Question 4
+
+> CHICAGO hears your concerns, but still wants an estimate of the impacts of BRYANT17 to support the CUBS. Given that you're unable to implement your ideal experiment, and you are worried about simple comparisons of BRYANT17-aided counties and those without BRYANT17 funding, you'll need to do something a little more sophisticated. Luckily for you and for CHICAGO's CUBS, the U.S. makes data on the electricity sector available to the public, in the form of `ps2_data.csv`. Read the data into R and, as always, make sure everything makes sense. Document and fix any errors. Quick note: the electricity demand variable contains some zeroes – this is not an error, but rather because it’s rounded to the nearest integer. Use the variables contained in the dataset to describe, using math and words, two (related) potential approaches to estimating the effect of BRYANT17 on solar generation. Make sure to be clear about your unit of analysis, and be explicit about how these designs apply to BRYANT17 (ie, describe things in terms of "solar generation," not just "outcome"). Hint: BRYANT17 wants you to describe two selection-on-observables designs.
+
+
+```{r message=FALSE, warning=FALSE}
+#install.packages(Hmisc)
+library(Hmisc)
+library(here)
+df<-read_csv(here("ps2_data.csv"))
+summary(df)
+describe(df)
+
+# Convert the observations "seven" into number 7. 
+df$n_powerplants_2016[df$n_powerplants_2016 == "seven"] = "7"
+
+# Transform character vector into numeric vector.
+df$n_powerplants_2016 <- as.numeric(as.character(df$n_powerplants_2016))
+
+```
+
+1) regression adjustment
+
+Yi=α+τDi+γXi+υi
+
+The regression is equal to alpha, the constant, plus τDi, the common component of treatment effects, plus γXi, some set of covariates, plus υi, the error term. This formula assumes that there are not unobservable variables that could affect the solar generation and that the variables that we can observe are the only characteristics that influence our outcome. The unit of analysis is the average treatment effect of counties.
+
+solar generation 2018 = bryant17 + main source generation 2016 + electricity demand 2016 + npower plants 2016 +state + solar generation 2016
+
+Then we should run a linear regression to estimate the effect of solar generation with all the observable variables 
+
+2) matching: compare treated and untreated units with identical Xs, seeks to pair treated and untreated on observables. As we have some continuous variables we cannot use exact matching but could use nearest neighbor or bandwidth. We assume that both units have the same observable characteristics, however we are not able to learn if the unobservable features are the same. The unit of analysis for matching would be counties treated and untreated (BRYANT17)
+
+1. Divide k cells defined by the covariates 
+2. For each cell calculate the outcome of treated (average solar generation of treated 2018) and outcome of untreated (average solar generation of untreated 2018)
+3. Calculate average solar generation 2018 of counties participant of BRYANT17 minus average solar generation 2018 of counties non participants of BRYANT17 
+4. Estimate tau^ATE as a weighted average
+
+tau^ate = [solar_generation_i(1)-solar_generation_i(0)]*wi ; where wi is the weighted average
+
+
+
+\newpage
+
+# Question 5
+
+> Produce a balance table which displays the differences between BRYANT17 and non-BRYANT17 counties on observable characteristics. Interpret this table. Does this table make you feel better or worse about your concerns in (3)? 
+
+```{r}
+#Balance table for non categorical variables 
+
+reg<- df %>%
+  select(-c(name,solar_generation_mwh_2018,bryant17_county,
+            main_source_of_generation_2016, state, fips)) %>%
+  lapply(function(x) lm(x ~ bryant17_county, data = df)) 
+
+balance_table <- reg %>%
+sapply(function(x) coef(summary(x))[c(2,8)]) %>% 
+  t()
+balance_table %>%
+kable(col.names = c("Difference in Means", "$p$-value"),
+        row.names = TRUE, caption = "Balance Table for Numerical Variables")
+
+
+```
+We can see  that the levels of electricity demand in 2016 and solar generation in 2016 are not statistically significant. Which means that the control and treatment groups are similarly distributed and are balanced. But the number of power plants is statistically significant which means that treatment and control group are not similarly distributed and it is not balanced. 
+
+```{r message=FALSE, warning=FALSE}
+library(fastDummies)
+#Convert categorical main source of generation variable to dummies 
+main_source_dum <- df %>% dummy_cols(select_columns = c('main_source_of_generation_2016'), remove_selected_columns = TRUE)
+
+main_source_reg <- lapply(main_source_dum %>% 
+                            select(contains('main_source_of_generation_2016_')),
+function(x) lm(x ~ bryant17_county, data=main_source_dum)) 
+balance_table <- main_source_reg %>%
+sapply(function(x) coef(summary(x))[c(2,8)]) %>%
+t()
+balance_table %>% kable(col.names = c("Difference in Means", "$p$-value"),
+                        caption = "Balance Table for Main Source of Electricity Gen")
+```
+
+In this balance table we can observe that every main source of generation (except wind) is statistically significant. Which means that treatment and control variables are not similarly distributed and they are not balanced. Wind is the only source of generation not statistically significant and balanced for treatment and control units. 
+
+```{r message=FALSE, warning=FALSE}
+library(fastDummies)
+#Convert State variables to dummies in order to perform balance table 
+state_dum <- df %>% dummy_cols(select_columns = c('state'), remove_selected_columns = TRUE)
+state_reg <- lapply(state_dum %>% select(contains('state_')),
+function(x) lm(x ~ bryant17_county, data=state_dum)) 
+balance_table <- state_reg %>%
+sapply(function(x) coef(summary(x))[c(2,8)]) %>%
+t()
+row.names(balance_table) <-gsub('state_', '', row.names(balance_table)) 
+balance_table %>%
+kable(col.names = c("Difference in Means", "$p$-value"), caption = "Balance Table for States")
+```
+
+We can observe that many of the states have p-values that are statistically significant. Which mean that the distribution between the control group and the treatment group is not similar and that they are not balanced. 
+
+In conclusion, there are some variables (state, main source onf generation and number of power plants ) that are statistically significant. Meaning that treatment and control group are not similar (not balanced), only confirming what we stated in question 3 that there are other observable characteristics that could drive us to not estimating the real effect on treated.
+
+\newpage
+
+# Question 6
+
+> CHICAGO are interested in your approach in (4), but would like to know a bit more about how much they should believe your proposal. Describe the assumptions required for these designs to be valid in math and in words. To the extent possible, assess the validity of these assumptions using the provided data. Discuss whether you think you will be able to obtain a credible estimate of the answer to the questions described in (1) and (2) based on the data, and use concrete examples to explain why or why not. 
+
+The central assumption is that potential outcomes are independent of treatment assignment conditional on covariates, in other words, we have eliminated selection. 
+
+(Y_i (1),Y_i (0)) ⊥ D_i |X_i
+
+We are also assuming common support or overlap, which is mathematically expressed as follows:
+0<Pr(D_i=1|X_i=x)<1
+
+The probability of treatment status = 1 for all levels of Xi is between zero and one. Meaning that there exist treated and untreated units in the population. 
+
+In the case of regression adjustment, it would be difficult to obtain a credible estimate since we would need covariates to be similar and that is not guaranteed. Furthermore, we would have to make sure that we are writing down the right regression which is difficult to know.
+
+Exact matching does not work for continuous variables, so no continuos variable should be included. We also need to assume strong conditional independence which is almost never true in real life.
+
+We don't think we will be able to obtain credible estimates because the more Xs you have the less likely there is to have a match. We do not know if we are observing everything i.e., county size with respect to the proportion of solar energy generated/used or the solar exposition the counties have (some counties might be able to generate more solar energy than other due latitude).
+
+
+\newpage
+
+# Question 7
+
+> Use a regression-based approach to estimate the effect of BRYANT17 on solar generation. Describe which variables you chose to include in your regression, and explain why you chose these. Did you leave any variables out? If yes, explain why. Interpret your results. What are the strengths and weaknesses of this approach? How do your results differ from what you find if you instead use the naive estimator?
+
+For regression adjustment we include all variables that are not balanced, which we can see in the balance table for Q.5 these variables are state, main source of generation, and power plants. We also include bryant17 to see the effect of treatment. We use the unbalance variables because the covariates must be the variables that cause variation to the outcome. Meaning that similar treatment and control group variables (those which are balanced in Q.5) should not be included. 
+The strengths of reg adjustment:
+We can relax the assumption of "as good as random"
+Weaknesses of reg adjustment:
+if the distance between the treatment and control variables is large our estimate tau will be biased. 
+We need a good overall between treatment and control
+Under randomization the naive estimator and the regression approach are equal (tau = tau^SOO) 
+
+```{r message=FALSE, warning=FALSE}
+#Calculate the naive estimator regression
+reg_naive<- lm(solar_generation_mwh_2018 ~ bryant17_county, data=df)
+stargazer(reg_naive, type = "text", title="Descriptive statistics", digits=2, out="table2.txt")
+
+#Calculate restriction regression 
+reg_rest<-lm(solar_generation_mwh_2018 ~ bryant17_county +state + 
+               main_source_of_generation_2016
++ n_powerplants_2016, data = df)
+
+stargazer(reg_rest, type = "text", title="Descriptive statistics", digits=2, out="table1.txt")
+
+```
+ In the naive estimator we can see that the treatment is no statistically significant (p-value >0.5) which means that BRYANT17 had no effect on treated counties. However, as we stated in Q.3 there are many problems with the naive estimation. 
+ 
+However, when running the regression restriction, the treatment (BRYANT17) is statistically significant. This might show us that there was no randomization when assigned to treatment because under randomization tau^SOO = tau^ATE
+For regression adjustment BRYANT17 is -212.00 Mwh which means that those counties treated conditional on the covariates, the BRYANT17 counties with respect to the non-BRYANT17 had a decrease in the solar generation of about -212 megawatts per hour.
+
+
+\newpage
+
+# Question 8
+
+> Use an exact matching approach to estimate the effect of BRYANT17 on solar generation. What variables should you include in the matching procedure? Begin by estimating the answer to the question in (1). Then, estimate the answer to the question in (2). Are these meaningfully different? Would you have expected these results to be the same? Why or why not? What are the strengths and weaknesses of this approach? How do your results differ from what you find if you instead use the naive estimator? From what you found in (7)? Did you run into the Curse of Dimensionality with this analysis? If yes, describe how it affected your approach. If not, describe how the Curse could have generated problems in this setting. 
+
+```{r message=FALSE, warning=FALSE}
+#install.packages("MatchIt")
+#install.packages("optmatch")
+#install.packages("lmtest")
+library(optmatch)
+library(MatchIt)
+library(lmtest)
+
+#Run ATE
+ate<-matchit(bryant17_county ~  state + main_source_of_generation_2016 +
+               n_powerplants_2016, data = df,
+             estimand = "ATE",
+             method = "exact")
+#EStimate 
+md1 <- match.data(ate)
+
+#Run regression 
+fit1 <- lm(solar_generation_mwh_2018 ~ bryant17_county , data = md1, weights = weights)
+#Present results
+stargazer(fit1, type = "text", title="Descriptive statistics", digits=2)
+
+#Run ATT
+att<-matchit(bryant17_county ~ state + main_source_of_generation_2016 + 
+               n_powerplants_2016, data = df,
+             estimand = "ATT", 
+             method = "exact")
+
+#Estimate 
+md2 <- match.data(att)
+
+#Run regression 
+fit2 <- lm(solar_generation_mwh_2018 ~ bryant17_county , data = md2, weights = weights)
+#Present results 
+stargazer(fit2, type = "text", title="Descriptive statistics", digits=2)
+
+```
+For exact matching  we include all variables that are not balanced, which we can see in the balance table for Q.5 these variables are state, main source of generation, and power plants. We also include bryant17 to see the effect of treatment. We use the unbalance variables because the covariates must be the variables that cause variation to the outcome. Meaning that similar treatment and control group variables (those which are balanced in Q.5) should not be included. 
+
+The ATE estimation is -219
+The ATT estimation is -334
+There is a difference of over 100 mega wats per hour which is meaningfully different. We did not expect that the ATT and ATE were equal because that would only happen if there was no selection problem. However, as we saw in Q.3 there might be a selection problem. 
+
+The results differ a lot from the naive estimator, first the naive estimator has a positive effect, meaning that the treated units generate 6.9 mega watts per hour more than the untreated units, which contradicts the results from regression adjustment and exact matching. There is a small difference between regression adjustment (-212 mph) and exact matching (-219 mph).
+
+Strength of matching:
+Creates observably identical treated and untreated comparisons. We do not have to worry about X ̅T and X ̅U since they are identical to each other. Besides, there is no underlying assumption here that relationship between Y and X is linear. We do not have to worry about how we are controlling for that underlying relationship between Y and X because we have an X that is treated and other X that is untreated for every level of X.
+Weakness of matching: 
+It does not work for continuous Xs since is very difficult to divide cells with them. Also, it might also be hard to find cases where we have exactly the same values of X for both treated and untreated units.
+
+If there are many things that determine selection into treatment, the harder it will be to separate out the true treatment from all those covariates. In other words, the more things selection depends on, the more difficult it will be to estimate anything. Thus, in the particular case we run into the Curse Dimensionality since we have numerous variables, which prevent us from actually learning in which of them the true treatment depends on.
+\newpage
+
+# Question 9
+
+> Based on your results in (8), explain to CHICAGO whether or not they should implement CUBS. Be sure to tell them the reasoning behind your recommendation.
+
+Based on exact matching results the counties assigned to BRYANT and the counties that actually participated in BRYANT are reducing their solar generation than those from the control group. 
+However, I have no elements to recommend the treatment as it appears they are actually generating less solar energy instead of more that would be what you expect. There was no randomization in the program, the results might be biased and we might be not capturing the real effect on treatment.
+
+
+
+
+
+
+
+
